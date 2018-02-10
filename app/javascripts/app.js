@@ -7,10 +7,11 @@ import { default as contract } from 'truffle-contract'
 
 // Import our contract artifacts and turn them into usable abstractions.
 import hello_artifacts from '../../build/contracts/HelloEther.json'
+import casino_artifacts from '../../build/contracts/Casino.json'
 
 // hello is our usable abstraction, which we'll use through the code below.
 var HelloEther = contract(hello_artifacts);
-
+var Casino = contract(casino_artifacts);
 // The following code is simple to show off interacting with your contracts.
 // As your needs grow you will likely need to change its form and structure.
 // For application bootstrapping, check out window.addEventListener below.
@@ -21,6 +22,38 @@ window.App = {
   start: function() {
     var self = this;
     HelloEther.setProvider(web3.currentProvider);
+    Casino.setProvider(web3.currentProvider);
+    // Get the initial account balance so it can be displayed.
+    web3.eth.getAccounts(function(err, accs) {
+      if (err != null) {
+        alert("There was an error fetching your accounts.");
+        return;
+      }
+
+      if (accs.length == 0) {
+        alert("Couldn't get any accounts! Make sure your Ethereum client is configured correctly.");
+        return;
+      }
+
+      accounts = accs;
+
+      account = accounts[0];
+      console.log("Current Account "+account);
+      self.listenEvents();
+    });
+  },
+
+  listenEvents: function(){
+    var self = this;
+    Casino.deployed().then(function(instance) {
+      instance.DeclareWinner({},{fromBlock: 0, toBlock: 'latest'}).watch(function(err,result){
+        console.log("Inside events")
+        if(result.args.winner == account)
+          self.setStatus("You are the winner!");
+        else
+          self.setStatus("You lost! haha");
+      });
+    });
   },
 
   setStatus: function(message) {
@@ -28,6 +61,10 @@ window.App = {
     status.innerHTML = message;
   },
 
+  setHand: function(message) {
+    var status = document.getElementById("hand");
+    status.innerHTML = message;
+  },
 
   sayHello: function() {
     var self = this;
@@ -44,8 +81,39 @@ window.App = {
       console.log(e);
       self.setStatus("Error saying hello; see log.");
     });
+  },
+
+placeBet: function() {
+  var self = this;
+   var betValue = document.getElementById("betValue").value;
+    this.setStatus("Initiating bet transaction... (please wait)");
+
+    var casino;
+    Casino.deployed().then(function(instance) {
+      casino = instance;
+      return casino.placeBet({from: account, value: web3.toWei(betValue, "ether")});
+    }).then(function(res) {
+      self.setStatus("Your bet of "+betValue+" ether  been placed");
+      if(res.logs.length != 0 ){
+        // self.listenEvents();
+        // debugger
+        if(res.logs[0].args.winner == account)
+          self.setStatus("You are the winner!");
+        else
+          self.setStatus("You lost! haha");
+      }
+      return casino.getHand.call(account);
+    }).then(function(res) {
+
+      self.setHand("Your hand is "+res.toNumber());
+    }).catch(function(e) {
+      console.log(e);
+      self.setStatus("Error placing bet; see log.");
+    });
   }
 };
+
+
 
 window.addEventListener('load', function() {
   // Checking if Web3 has been injected by the browser (Mist/MetaMask)
