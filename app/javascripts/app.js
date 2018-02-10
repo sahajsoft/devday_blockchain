@@ -102,10 +102,10 @@ placeBet: function() {
         else
           self.setStatus("You lost! haha");
       }
-      return casino.getHand.call(account);
+      return "";
     }).then(function(res) {
 
-      self.setHand("Your hand is "+res.toNumber());
+      //self.setHand("Your hand is "+res.toNumber());
     }).catch(function(e) {
       console.log(e);
       self.setStatus("Error placing bet; see log.");
