@@ -22,3 +22,7 @@ OS - Mac OSX/Linux ideal
 If you see, __"Show me the Ether"__, you are good to go! 
 
 
+  	function random(uint256 upper) public returns (uint256) {
+    	_seed = uint256(sha3(sha3(block.blockhash(block.number), _seed), now));
+    	return _seed % upper;
+  	}
